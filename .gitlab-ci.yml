@@ -1,0 +1,29 @@
+image: golang:latest
+
+stages:
+  - test
+  - package
+
+format:
+  stage: test
+  script:
+    - go fmt $(go list ./... | grep -v /vendor/)
+    - go vet -lostcancel $(go list ./... | grep -v /vendor/)
+    - go test -race $(go list ./... | grep -v /vendor/)
+
+compile:
+  image: docker:stable-dind
+  stage: package
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN XXXXXX
+  script:
+    - echo SERVER_URL="0.0.0.0:8090" >> .env
+    - echo MONGODB_URI=XXXXXX >> .env
+    - echo CERT_FILE=/etc/letsencrypt/live/XXXXXX/fullchain.pem >> .env
+    - echo KEY_FILE=/etc/letsencrypt/live/XXXXXX/privkey.pem >> .env
+    - docker build -t XXXXXX .
+    - docker push XXXXXX
+  dependencies:
+    - format
+  only:
+    - master
